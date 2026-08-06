@@ -137,25 +137,48 @@ async function main() {
     .neq("emails", "{}")
     .limit(cap);
 
-  // Fresh email-1s: named + HOT first (replies build domain reputation)
-  const { data: e1 } = await supabase
+  // Fresh email-1s: two pools — named leads by score, then unnamed by
+  // score. (A single owner_first_name sort was alphabetical, which put
+  // "Zpace" ahead of a HOT named lead. Score is the real currency.)
+  const { data: e1Named } = await supabase
     .from("nectarpay_leads")
     .select(SELECT)
     .eq("status", "NEW")
     .eq("email_stage", 0)
     .neq("emails", "{}")
-    .order("owner_first_name", { ascending: false, nullsFirst: false })
+    .not("owner_first_name", "is", null)
     .order("score", { ascending: false })
     .limit(cap * 2);
+
+  const { data: e1Unnamed } = await supabase
+    .from("nectarpay_leads")
+    .select(SELECT)
+    .eq("status", "NEW")
+    .eq("email_stage", 0)
+    .neq("emails", "{}")
+    .is("owner_first_name", null)
+    .order("score", { ascending: false })
+    .limit(cap * 2);
+
+  const e1 = [...(e1Named ?? []), ...(e1Unnamed ?? [])];
 
   type Job = { lead: LeadRow; stage: 1 | 2 | 3 };
   const jobs: Job[] = [];
   for (const l of (e3 ?? []) as LeadRow[]) jobs.push({ lead: l, stage: 3 });
   for (const l of (e2 ?? []) as LeadRow[]) jobs.push({ lead: l, stage: 2 });
-  for (const l of (e1 ?? []) as LeadRow[]) jobs.push({ lead: l, stage: 1 });
+  for (const l of e1 as LeadRow[]) jobs.push({ lead: l, stage: 1 });
 
+  // One email per inbox per run — multi-location chains share corporate
+  // addresses (Zen Leaf x5 taught us this)
+  const seenAddresses = new Set<string>();
   const plan = jobs
     .filter((j) => !engagedTokens.has(j.lead.pulse_token))
+    .filter((j) => {
+      const addr = j.lead.emails[0]?.toLowerCase();
+      if (!addr || seenAddresses.has(addr)) return false;
+      seenAddresses.add(addr);
+      return true;
+    })
     .slice(0, cap);
 
   console.log(
@@ -209,6 +232,19 @@ async function main() {
         })
         .eq("place_id", lead.place_id);
       if (upErr) console.error(`  ! status update ${lead.place_id}: ${upErr.message}`);
+
+      // Sibling locations sharing this inbox count as contacted too —
+      // one chain, one email, never five
+      const { error: sibErr } = await supabase
+        .from("nectarpay_leads")
+        .update({
+          status: "EMAILED",
+          email_stage: stage,
+          last_emailed_at: new Date().toISOString(),
+        })
+        .eq("status", "NEW")
+        .contains("emails", [to]);
+      if (sibErr) console.error(`  ! sibling update ${to}: ${sibErr.message}`);
       if (sent % 20 === 0) console.log(`  ...${sent}/${plan.length}`);
     }
     await sleep(cfg.sendDelayMs);
