@@ -1,0 +1,11 @@
+{
+  "campaignStart": "2026-08-06",
+  "ramp": [
+    { "throughDay": 7,  "dailyCap": 30 },
+    { "throughDay": 14, "dailyCap": 60 },
+    { "throughDay": 21, "dailyCap": 120 },
+    { "throughDay": 9999, "dailyCap": 250 }
+  ],
+  "followupGapDays": { "email2": 4, "email3": 5 },
+  "sendDelayMs": 700
+}

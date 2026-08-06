@@ -1,0 +1,23 @@
+{
+  "name": "nectarpay-campaigns",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "send": "tsx src/send.ts",
+    "send:dry": "tsx src/send.ts --dry",
+    "send:test": "tsx src/send.ts --test",
+    "report": "tsx src/report.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "resend": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
