@@ -1,7 +1,7 @@
 // Templates: 4 story clusters x 3 emails. Text-forward — cold email should
 // read like a person typed it, not like a designed newsletter.
 
-export type Cluster = "control" | "math" | "crowd" | "simple";
+export type Cluster = "control" | "math" | "crowd" | "simple" | "native";
 
 export const CLUSTER_MAP: Record<string, Cluster> = {
   "smoke-vape": "control",
@@ -27,6 +27,7 @@ export const CLUSTER_MAP: Record<string, Cluster> = {
   "nail-beauty": "crowd",
   "gaming": "crowd",
   "thrift-vintage": "crowd",
+  "crypto-native": "native",
 };
 
 export type TemplateLead = {
@@ -117,6 +118,16 @@ const E1: Record<Cluster, (l: TemplateLead) => { subject: string; paras: string[
       `Being the first spot on the block that takes it is worth more than the fees it saves — and it saves those too.`,
     ],
   }),
+  native: (l) => ({
+    subject: l.owner_first_name
+      ? `You saw this coming, ${l.owner_first_name}`
+      : `${l.name} saw this coming before the block did`,
+    paras: [
+      `Most shops in ${l.city} are still deciding whether crypto is real. You already take it — which tells me you did the homework years before your neighbors.`,
+      `I work with NectarPay here in the Valley. It's a counter terminal built for shops exactly like yours: zero processing fee on crypto, ten-second checkout, settlement straight to a wallet you control — no processor in the middle, ever. If your current setup is a QR taped to the register or a rail that takes a cut, this is the cleaner version. $499 once, $19 a month, flat.`,
+      `It sits beside whatever you run today — worth ten minutes comparing it against your current rail.`,
+    ],
+  }),
   simple: (l) => ({
     subject: l.owner_first_name
       ? `Work done should mean paid, ${l.owner_first_name}`
@@ -130,6 +141,7 @@ const E1: Record<Cluster, (l: TemplateLead) => { subject: string; paras: string[
 };
 
 const E2_INTRO: Record<Cluster, string> = {
+  native: `unused — native e2 renders its own body`,
   control: `Quick follow-up — last time I mentioned nobody can freeze or reverse this lane. Here's the other half: what it saves.`,
   math: `Following up with the napkin math. Here's what $10K/month on cards looks like:`,
   crowd: `Following up — beyond the young crowd at your counter, here's what the fee side looks like:`,
@@ -137,6 +149,7 @@ const E2_INTRO: Record<Cluster, string> = {
 };
 
 const E3_LINE: Record<Cluster, string> = {
+  native: `Either way — you were early, and that's worth something on the map we're building.`,
   control: `Either way, no hard feelings — but if processors ever squeeze you again, you'll wish this was already on the counter.`,
   math: `Either way — the fee math doesn't change, so the door's open whenever it makes sense.`,
   crowd: `Either way — first shop on the block still gets the bragging rights, and that window's open now.`,
@@ -175,6 +188,22 @@ export function renderEmail(
         f.html
     );
     const text = `${g}\n\n${paras.join("\n\n")}\n${b.text}\n\n— ${rep.first}${f.text}`;
+    return { subject, html, text };
+  }
+
+  if (stage === 2 && cluster === "native") {
+    const subject = lead.owner_first_name
+      ? `Early shops anchor the map, ${lead.owner_first_name}`
+      : `Early shops anchor the map`;
+    const html = wrapHtml(
+      `<p>${esc(greet(lead))}</p>` +
+        `<p>${esc(`One more thing being early earns you: NectarPay is building a merchant directory — crypto holders nearby see the shops that take it and head for the door. The first listed shops anchor the map for their whole neighborhood.`)}</p>` +
+        `<p>${esc(`Between zero-fee processing and the listing, it's worth putting your setup side by side with ours:`)}</p>` +
+        `<p><a href="${napkinLink}" style="display:inline-block;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Compare it on your numbers →</a></p>` +
+        `<p>— Eric</p>`.replace('Eric', rep.first) +
+        f.html
+    );
+    const text = `${greet(lead)}\n\nOne more thing being early earns you: NectarPay is building a merchant directory — crypto holders nearby see the shops that take it and head for the door. The first listed shops anchor the map for their whole neighborhood.\n\nWorth putting your setup side by side with ours:\n${napkinLink}\n\n— ${rep.first}${f.text}`;
     return { subject, html, text };
   }
 

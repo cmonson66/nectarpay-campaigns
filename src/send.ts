@@ -33,6 +33,7 @@ type LeadRow = TemplateLead & {
   status: string;
   email_stage: number;
   last_emailed_at: string | null;
+  crypto_native: boolean | null;
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -143,7 +144,7 @@ async function main() {
   const engagedTokens = new Set((engaged ?? []).map((e) => e.pulse_token));
 
   const SELECT =
-    "place_id, name, city, vertical, vertical_label, owner_first_name, pulse_token, emails, band, score, status, email_stage, last_emailed_at";
+    "place_id, name, city, vertical, vertical_label, owner_first_name, pulse_token, emails, band, score, status, email_stage, last_emailed_at, crypto_native";
 
   const cutoff = (days: number) =>
     new Date(Date.now() - days * 86400000).toISOString();
@@ -194,7 +195,9 @@ async function main() {
 
   type Job = { lead: LeadRow; stage: 1 | 2 | 3 };
   const jobs: Job[] = [];
-  for (const l of (e3 ?? []) as LeadRow[]) jobs.push({ lead: l, stage: 3 });
+  // Native sequence is two emails by design — no either-way close
+  const isNative = (l: LeadRow) => l.crypto_native || l.vertical === "crypto-native";
+  for (const l of ((e3 ?? []) as LeadRow[]).filter((l) => !isNative(l))) jobs.push({ lead: l, stage: 3 });
   for (const l of (e2 ?? []) as LeadRow[]) jobs.push({ lead: l, stage: 2 });
   for (const l of e1 as LeadRow[]) jobs.push({ lead: l, stage: 1 });
 
@@ -237,7 +240,19 @@ async function main() {
   for (const { lead, stage } of plan) {
     const to = lead.emails[0];
     const rep = repFor(lead.place_id);
-    const rendered = renderEmail(stage, { ...lead, city: cityShort(lead.city) }, BASE, ADDRESS, rep);
+    const rendered = renderEmail(
+      stage,
+      {
+        ...lead,
+        city: cityShort(lead.city),
+        // Flagged leads keep their locked vertical in the DB but get the
+        // native story in email — vertical only drives cluster lookup here
+        vertical: isNative(lead) ? "crypto-native" : lead.vertical,
+      },
+      BASE,
+      ADDRESS,
+      rep
+    );
 
     const { error } = await resend.emails.send({
       from: `${rep.first} at NectarPay AZ <${rep.fromEmail}>`,
