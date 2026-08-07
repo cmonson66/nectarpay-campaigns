@@ -124,7 +124,8 @@ const E1: Record<Cluster, (l: TemplateLead) => { subject: string; paras: string[
       : `${l.name} saw this coming before the block did`,
     paras: [
       `Most shops in ${l.city} are still deciding whether crypto is real. You already take it — which tells me you did the homework years before your neighbors.`,
-      `I work with NectarPay here in the Valley. It's a counter terminal built for shops exactly like yours: zero processing fee on crypto, ten-second checkout, settlement straight to a wallet you control — no processor in the middle, ever. If your current setup is a QR taped to the register or a rail that takes a cut, this is the cleaner version. $499 once, $19 a month, flat.`,
+      `Here's what I keep seeing at shops that already take it, though: either a BitPay-style processor skimming 1–2% plus a quarter per transaction and settling to the bank in a day or two — card-fee economics on crypto rails — or a bare wallet QR taped by the register that's actually free, but clunky enough that the staff steer people away from it.`,
+      `NectarPay is the third option: a real counter terminal — staff type the amount, customer scans, ten seconds — with zero processing fee and settlement straight to a wallet you control, instantly. Processor-grade checkout, DIY-grade economics. $499 once, $19 a month, flat — never a percentage.`,
       `It sits beside whatever you run today — worth ten minutes comparing it against your current rail.`,
     ],
   }),
