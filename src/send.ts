@@ -4,7 +4,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { renderEmail, CLUSTER_MAP, type TemplateLead } from "./templates.js";
+import { renderEmail, CLUSTER_MAP, DEFAULT_REP, type Rep, type TemplateLead } from "./templates.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -104,6 +104,36 @@ async function main() {
   const cap = todaysCap(cfg);
   console.log(`Daily cap today: ${cap}`);
 
+  // --- Rep routing: CRM owner assignment decides the sender ------------
+  const { data: repRows } = await supabase
+    .from("reps")
+    .select("profile_id, first_name, from_email, cell, is_default, active")
+    .eq("active", true);
+  const repsById = new Map<string, Rep>(
+    (repRows ?? []).map((r) => [r.profile_id, { first: r.first_name, fromEmail: r.from_email }])
+  );
+  const defaultRep: Rep =
+    (repRows ?? [])
+      .filter((r) => r.is_default)
+      .map((r) => ({ first: r.first_name, fromEmail: r.from_email }))[0] ?? DEFAULT_REP;
+
+  const { data: ownerRows } = await supabase
+    .from("contacts")
+    .select("legacy_id, owner_id")
+    .not("legacy_id", "is", null)
+    .not("owner_id", "is", null);
+  const ownerByPlace = new Map<string, string>(
+    (ownerRows ?? []).map((c) => [c.legacy_id as string, c.owner_id as string])
+  );
+
+  const repFor = (placeId: string): Rep => {
+    const ownerId = ownerByPlace.get(placeId);
+    return (ownerId && repsById.get(ownerId)) || defaultRep;
+  };
+  console.log(
+    `Reps: ${(repRows ?? []).map((r) => r.first_name + (r.is_default ? "*" : "")).join(", ") || "none (env fallback)"} · ${ownerByPlace.size} owned contacts`
+  );
+
   // --- Hard-engagement suppression set --------------------------------
   // Any non-view event = the lead is Eric's now; the sequence stops.
   const { data: engaged } = await supabase
@@ -191,7 +221,7 @@ async function main() {
   if (DRY) {
     for (const j of plan) {
       console.log(
-        `  e${j.stage} -> ${j.lead.emails[0]}  [${j.lead.vertical}/${j.lead.band}] ${j.lead.name}` +
+        `  e${j.stage} [from ${repFor(j.lead.place_id).first}] -> ${j.lead.emails[0]}  [${j.lead.vertical}/${j.lead.band}] ${j.lead.name}` +
         (j.lead.owner_first_name ? ` (${j.lead.owner_first_name})` : "")
       );
     }
@@ -206,12 +236,13 @@ async function main() {
 
   for (const { lead, stage } of plan) {
     const to = lead.emails[0];
-    const rendered = renderEmail(stage, { ...lead, city: cityShort(lead.city) }, BASE, ADDRESS);
+    const rep = repFor(lead.place_id);
+    const rendered = renderEmail(stage, { ...lead, city: cityShort(lead.city) }, BASE, ADDRESS, rep);
 
     const { error } = await resend.emails.send({
-      from: FROM,
+      from: `${rep.first} at NectarPay AZ <${rep.fromEmail}>`,
       to,
-      replyTo: REPLY_TO,
+      replyTo: rep.fromEmail,
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
@@ -222,7 +253,7 @@ async function main() {
       log.push(`${stage},${to},"${lead.name}",${lead.vertical},${lead.band},FAILED`);
     } else {
       sent++;
-      log.push(`${stage},${to},"${lead.name}",${lead.vertical},${lead.band},sent`);
+      log.push(`${stage},${to},"${lead.name}",${lead.vertical},${lead.band},sent:${rep.first}`);
       const { error: upErr } = await supabase
         .from("nectarpay_leads")
         .update({

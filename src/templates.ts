@@ -31,6 +31,9 @@ export type TemplateLead = {
 
 type Rendered = { subject: string; html: string; text: string };
 
+export type Rep = { first: string; fromEmail: string };
+export const DEFAULT_REP: Rep = { first: "Eric", fromEmail: "eric@nectarpayaz.com" };
+
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -60,11 +63,11 @@ function buttons(base: string, token: string, pairs: [string, string][]): {
   return { html, text };
 }
 
-function footer(base: string, token: string, address: string): { html: string; text: string } {
+function footer(base: string, token: string, address: string, rep: Rep): { html: string; text: string } {
   const stop = pulse(base, token, "optout");
   return {
-    html: `<p style="margin:26px 0 0;font-size:12px;color:#8a94a3">Eric · NectarPay Ambassador, Phoenix<br>${esc(address)}<br><a href="${stop}" style="color:#8a94a3">Not for us — stop emailing</a></p>`,
-    text: `\n--\nEric · NectarPay Ambassador, Phoenix\n${address}\nNot for us — stop emailing: ${stop}`,
+    html: `<p style="margin:26px 0 0;font-size:12px;color:#8a94a3">${esc(rep.first)} · NectarPay Ambassador, Phoenix<br>${esc(address)}<br><a href="${stop}" style="color:#8a94a3">Not for us — stop emailing</a></p>`,
+    text: `\n--\n${rep.first} · NectarPay Ambassador, Phoenix\n${address}\nNot for us — stop emailing: ${stop}`,
   };
 }
 
@@ -144,11 +147,12 @@ export function renderEmail(
   stage: 1 | 2 | 3,
   lead: TemplateLead,
   baseUrl: string,
-  address: string
+  address: string,
+  rep: Rep = DEFAULT_REP
 ): Rendered {
   const cluster = CLUSTER_MAP[lead.vertical] ?? "math";
   const b = buttons(baseUrl, lead.pulse_token, INTENTS);
-  const f = footer(baseUrl, lead.pulse_token, address);
+  const f = footer(baseUrl, lead.pulse_token, address, rep);
   const napkinLink = pulse(baseUrl, lead.pulse_token, "fees");
   const g = greet(lead);
 
@@ -158,10 +162,10 @@ export function renderEmail(
       `<p>${esc(g)}</p>` +
         paras.map((p) => `<p>${esc(p)}</p>`).join("") +
         b.html +
-        `<p style="margin-top:14px">— Eric</p>` +
+        `<p style="margin-top:14px">— ${esc(rep.first)}</p>` +
         f.html
     );
-    const text = `${g}\n\n${paras.join("\n\n")}\n${b.text}\n\n— Eric${f.text}`;
+    const text = `${g}\n\n${paras.join("\n\n")}\n${b.text}\n\n— ${rep.first}${f.text}`;
     return { subject, html, text };
   }
 
@@ -182,10 +186,10 @@ export function renderEmail(
         table +
         `<p style="font-size:13px;color:#47566B">That's the $10K/month example — your number's different, so I set up a page where you can slide your own volume:</p>` +
         `<p><a href="${napkinLink}" style="display:inline-block;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Slide your own numbers →</a></p>` +
-        `<p>— Eric</p>` +
+        `<p>— ${esc(rep.first)}</p>` +
         f.html
     );
-    const text = `${g}\n\n${E2_INTRO[cluster]}\n\n${tableText}\n\nYour number's different — slide your own volume here:\n${napkinLink}\n\n— Eric${f.text}`;
+    const text = `${g}\n\n${E2_INTRO[cluster]}\n\n${tableText}\n\nYour number's different — slide your own volume here:\n${napkinLink}\n\n— ${rep.first}${f.text}`;
     return { subject, html, text };
   }
 
@@ -201,9 +205,9 @@ export function renderEmail(
       `<a href="${close}" style="display:inline-block;padding:11px 18px;border:1.5px solid #8a94a3;border-radius:8px;color:#47566B;text-decoration:none">Close my file</a>` +
       `</p>` +
       `<p>${esc(E3_LINE[CLUSTER_MAP[lead.vertical] ?? "math"])}</p>` +
-      `<p>— Eric</p>` +
+      `<p>— ${esc(rep.first)}</p>` +
       f.html
   );
-  const text = `${g}\n\nI'll be working ${lead.city} next week either way — worth ten minutes at your counter to see a live payment settle, or should I close your file?\n\nSwing by — pick a day: ${swing}\nClose my file: ${close}\n\n${E3_LINE[CLUSTER_MAP[lead.vertical] ?? "math"]}\n\n— Eric${f.text}`;
+  const text = `${g}\n\nI'll be working ${lead.city} next week either way — worth ten minutes at your counter to see a live payment settle, or should I close your file?\n\nSwing by — pick a day: ${swing}\nClose my file: ${close}\n\n${E3_LINE[CLUSTER_MAP[lead.vertical] ?? "math"]}\n\n— ${rep.first}${f.text}`;
   return { subject, html, text };
 }
