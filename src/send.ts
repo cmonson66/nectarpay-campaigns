@@ -4,7 +4,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { renderEmail, CLUSTER_MAP, DEFAULT_REP, type Rep, type TemplateLead } from "./templates.js";
+import { renderEmail, maxStageFor, CLUSTER_MAP, DEFAULT_REP, type Cluster, type Rep, type Stage, type TemplateLead } from "./templates.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -23,7 +23,7 @@ const ONLY = onlyIdx >= 0 ? argv[onlyIdx + 1] : null; // limit test sends to one
 type Config = {
   campaignStart: string;
   ramp: { throughDay: number; dailyCap: number }[];
-  followupGapDays: { email2: number; email3: number };
+  followupGapDays: Record<string, number>;
   sendDelayMs: number;
 };
 
@@ -83,12 +83,15 @@ async function main() {
     // sequence (e2 + e3) once per story cluster.
     const allVerticals = Object.keys(CLUSTER_MAP);
     const clusterReps = ["smoke-vape", "jewelry-gold", "barber", "phone-repair", "crypto-native"];
-    let jobs: { stage: 1 | 2 | 3; vertical: string }[] = [
-      ...allVerticals.map((v) => ({ stage: 1 as const, vertical: v })),
-      ...([2, 3] as const).flatMap((stage) => clusterReps.map((v) => ({ stage, vertical: v }))),
+    let jobs: { stage: Stage; vertical: string }[] = [
+      ...allVerticals.map((v) => ({ stage: 1 as Stage, vertical: v })),
+      ...clusterReps.flatMap((v) => {
+        const max = maxStageFor(CLUSTER_MAP[v] as Cluster);
+        const stages: Stage[] = [];
+        for (let st = 2; st <= max; st++) stages.push(st as Stage);
+        return stages.map((stage) => ({ stage, vertical: v }));
+      }),
     ];
-    // Native is a two-email sequence — no e3 sample
-    jobs = jobs.filter((j) => !(j.vertical === "crypto-native" && j.stage === 3));
     if (ONLY) jobs = jobs.filter((j) => j.vertical === ONLY);
     for (const { stage, vertical } of jobs) {
       const r = renderEmail(stage, { ...sample, vertical }, BASE, ADDRESS);
@@ -154,24 +157,28 @@ async function main() {
   const cutoff = (days: number) =>
     new Date(Date.now() - days * 86400000).toISOString();
 
-  // Follow-ups first — a warm thread beats a cold open
-  const { data: e3 } = await supabase
-    .from("nectarpay_leads")
-    .select(SELECT)
-    .eq("status", "EMAILED")
-    .eq("email_stage", 2)
-    .lte("last_emailed_at", cutoff(cfg.followupGapDays.email3))
-    .neq("emails", "{}")
-    .limit(cap);
+  const isNative = (l: LeadRow) => !!l.crypto_native || l.vertical === "crypto-native";
+  const stageCap = (l: LeadRow) => maxStageFor(isNative(l) ? "native" : (CLUSTER_MAP[l.vertical] ?? "math"));
 
-  const { data: e2 } = await supabase
-    .from("nectarpay_leads")
-    .select(SELECT)
-    .eq("status", "EMAILED")
-    .eq("email_stage", 1)
-    .lte("last_emailed_at", cutoff(cfg.followupGapDays.email2))
-    .neq("emails", "{}")
-    .limit(cap);
+  // Follow-ups first, oldest stages first — a warm thread beats a cold open,
+  // and leads closest to sequence-end close out before new threads open
+  const followups: { lead: LeadRow; stage: Stage }[] = [];
+  for (const stage of [6, 5, 4, 3, 2] as Stage[]) {
+    const gap = cfg.followupGapDays[String(stage)];
+    if (!gap) continue;
+    const { data } = await supabase
+      .from("nectarpay_leads")
+      .select(SELECT)
+      .eq("status", "EMAILED")
+      .eq("email_stage", stage - 1)
+      .lte("last_emailed_at", cutoff(gap))
+      .neq("emails", "{}")
+      .limit(cap);
+    for (const l of (data ?? []) as LeadRow[]) {
+      if (stage > stageCap(l)) continue; // native arc ends at 4
+      followups.push({ lead: l, stage });
+    }
+  }
 
   // Fresh email-1s: two pools — named leads by score, then unnamed by
   // score. (A single owner_first_name sort was alphabetical, which put
@@ -198,12 +205,8 @@ async function main() {
 
   const e1 = [...(e1Named ?? []), ...(e1Unnamed ?? [])];
 
-  type Job = { lead: LeadRow; stage: 1 | 2 | 3 };
-  const jobs: Job[] = [];
-  // Native sequence is two emails by design — no either-way close
-  const isNative = (l: LeadRow) => l.crypto_native || l.vertical === "crypto-native";
-  for (const l of ((e3 ?? []) as LeadRow[]).filter((l) => !isNative(l))) jobs.push({ lead: l, stage: 3 });
-  for (const l of (e2 ?? []) as LeadRow[]) jobs.push({ lead: l, stage: 2 });
+  type Job = { lead: LeadRow; stage: Stage };
+  const jobs: Job[] = [...followups];
   for (const l of e1 as LeadRow[]) jobs.push({ lead: l, stage: 1 });
 
   // One email per inbox per run — multi-location chains share corporate
@@ -219,11 +222,13 @@ async function main() {
     })
     .slice(0, cap);
 
+  const mix = ([6, 5, 4, 3, 2, 1] as Stage[])
+    .map((st) => ({ st, n: plan.filter((j) => j.stage === st).length }))
+    .filter(({ n }) => n > 0)
+    .map(({ st, n }) => `${n} × e${st}`)
+    .join(", ");
   console.log(
-    `Plan: ${plan.filter(j => j.stage === 3).length} × email-3, ` +
-    `${plan.filter(j => j.stage === 2).length} × email-2, ` +
-    `${plan.filter(j => j.stage === 1).length} × email-1 ` +
-    `(${engagedTokens.size} engaged leads excluded from sequences)`
+    `Plan: ${mix || "nothing due"} (${engagedTokens.size} engaged leads excluded from sequences)`
   );
 
   if (DRY) {

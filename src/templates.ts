@@ -1,7 +1,14 @@
-// Templates: 4 story clusters x 3 emails. Text-forward — cold email should
-// read like a person typed it, not like a designed newsletter.
+// Templates: 5 story clusters. Standard clusters run a 6-email arc,
+// crypto-native runs a tighter 4. Text-forward — cold email should read
+// like a person typed it, not like a designed newsletter.
 
 export type Cluster = "control" | "math" | "crowd" | "simple" | "native";
+export type Stage = 1 | 2 | 3 | 4 | 5 | 6;
+
+/** Native is a tighter 4-email arc; standard clusters run 6. */
+export function maxStageFor(cluster: Cluster): Stage {
+  return cluster === "native" ? 4 : 6;
+}
 
 export const CLUSTER_MAP: Record<string, Cluster> = {
   "smoke-vape": "control",
@@ -118,6 +125,16 @@ const E1: Record<Cluster, (l: TemplateLead) => { subject: string; paras: string[
       `Being the first spot on the block that takes it is worth more than the fees it saves — and it saves those too.`,
     ],
   }),
+  simple: (l) => ({
+    subject: l.owner_first_name
+      ? `Work done should mean paid, ${l.owner_first_name}`
+      : `Work done should mean paid — ${l.name}`,
+    paras: [
+      `You know the worst invoice in this business: the one that comes back. Work's finished, parts are in, service delivered — and weeks later a dispute claws the money back, with a fee stacked on top.`,
+      `I work with NectarPay here in the Valley. It's a counter terminal that takes crypto payments — zero processing fee, and the money settles to your own wallet in seconds. A settled payment is final: no dispute window, no clawbacks, no losing the work and the money.`,
+      `Setup is an afternoon, and your card reader keeps working exactly like today. This is the final-payment lane beside it.`,
+    ],
+  }),
   native: (l) => ({
     subject: l.owner_first_name
       ? `You saw this coming, ${l.owner_first_name}`
@@ -127,16 +144,6 @@ const E1: Record<Cluster, (l: TemplateLead) => { subject: string; paras: string[
       `Here's what I keep seeing at shops that already take it, though: either a BitPay-style processor skimming 1–2% plus a quarter per transaction and settling to the bank in a day or two — card-fee economics on crypto rails — or a bare wallet QR taped by the register that's actually free, but clunky enough that the staff steer people away from it.`,
       `NectarPay is the third option: a real counter terminal — staff type the amount, customer scans, ten seconds — with zero processing fee and settlement straight to a wallet you control, instantly. Processor-grade checkout, DIY-grade economics. $499 once, $19 a month, flat — never a percentage.`,
       `It sits beside whatever you run today — worth ten minutes comparing it against your current rail.`,
-    ],
-  }),
-  simple: (l) => ({
-    subject: l.owner_first_name
-      ? `Work done should mean paid, ${l.owner_first_name}`
-      : `Work done should mean paid — ${l.name}`,
-    paras: [
-      `You know the worst invoice in this business: the one that comes back. Work's finished, parts are in, service delivered — and weeks later a dispute claws the money back, with a fee stacked on top.`,
-      `I work with NectarPay here in the Valley. It's a counter terminal that takes crypto payments — zero processing fee, and the money settles to your own wallet in seconds. A settled payment is final: no dispute window, no clawbacks, no losing the work and the money.`,
-      `Setup is an afternoon, and your card reader keeps working exactly like today. This is the final-payment lane beside it.`,
     ],
   }),
 };
@@ -149,6 +156,16 @@ const E2_INTRO: Record<Cluster, string> = {
   simple: `Following up with the math, since the setup story is only half of it:`,
 };
 
+// e3: the objection email — cluster-tuned "nothing changes" angle
+const E3_ANGLE: Record<Cluster, string> = {
+  native: ``,
+  control: `This just adds a lane nobody can freeze or reverse — so the day a processor gets twitchy about your industry again, you already have money coming in that they can't touch.`,
+  math: `This adds a lane where the 3% simply doesn't exist — every customer who uses it is pure margin back, on top of a setup you didn't have to change.`,
+  crowd: `This adds the lane your youngest customers keep asking about — and that crowd tells each other which shops have it.`,
+  simple: `This adds a lane where a settled payment is final — no disputes, no clawbacks. Work done means paid.`,
+};
+
+// Final-email sign-off line per cluster
 const E3_LINE: Record<Cluster, string> = {
   native: `Either way — you were early, and that's worth something on the map we're building.`,
   control: `Either way, no hard feelings — but if processors ever squeeze you again, you'll wish this was already on the counter.`,
@@ -167,7 +184,7 @@ const INTENTS: [string, string][] = [
 ];
 
 export function renderEmail(
-  stage: 1 | 2 | 3,
+  stage: Stage,
   lead: TemplateLead,
   baseUrl: string,
   address: string,
@@ -197,14 +214,14 @@ export function renderEmail(
       ? `Early shops anchor the map, ${lead.owner_first_name}`
       : `Early shops anchor the map`;
     const html = wrapHtml(
-      `<p>${esc(greet(lead))}</p>` +
+      `<p>${esc(g)}</p>` +
         `<p>${esc(`One more thing being early earns you: NectarPay is building a merchant directory — crypto holders nearby see the shops that take it and head for the door. The first listed shops anchor the map for their whole neighborhood.`)}</p>` +
         `<p>${esc(`Between zero-fee processing and the listing, it's worth putting your setup side by side with ours:`)}</p>` +
-        `<p><a href="${napkinLink}" style="display:inline-block;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Compare it on your numbers →</a></p>` +
-        `<p>— Eric</p>`.replace('Eric', rep.first) +
+        `<p><a href="${napkinLink}" style="display:inline-block;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Compare it on your numbers &rarr;</a></p>` +
+        `<p>— ${esc(rep.first)}</p>` +
         f.html
     );
-    const text = `${greet(lead)}\n\nOne more thing being early earns you: NectarPay is building a merchant directory — crypto holders nearby see the shops that take it and head for the door. The first listed shops anchor the map for their whole neighborhood.\n\nWorth putting your setup side by side with ours:\n${napkinLink}\n\n— ${rep.first}${f.text}`;
+    const text = `${g}\n\nOne more thing being early earns you: NectarPay is building a merchant directory — crypto holders nearby see the shops that take it and head for the door. The first listed shops anchor the map for their whole neighborhood.\n\nWorth putting your setup side by side with ours:\n${napkinLink}\n\n— ${rep.first}${f.text}`;
     return { subject, html, text };
   }
 
@@ -214,7 +231,7 @@ export function renderEmail(
       : `The napkin math for ${lead.name}`;
     const table =
       `<table style="border-collapse:collapse;margin:10px 0 4px;font-size:14px">` +
-      `<tr><td style="padding:4px 14px 4px 0">Lost to card fees / year (~3%)</td><td style="color:#C8442C;font-weight:700">−$3,600</td></tr>` +
+      `<tr><td style="padding:4px 14px 4px 0">Lost to card fees / year (~3%)</td><td style="color:#C8442C;font-weight:700">&minus;$3,600</td></tr>` +
       `<tr><td style="padding:4px 14px 4px 0">NectarPay, year one — all in</td><td style="font-weight:700">$727</td></tr>` +
       `<tr><td style="padding:4px 14px 4px 0">Every year after</td><td style="font-weight:700">$228</td></tr>` +
       `</table>`;
@@ -224,7 +241,7 @@ export function renderEmail(
         `<p>${esc(E2_INTRO[cluster])}</p>` +
         table +
         `<p style="font-size:13px;color:#47566B">That's the $10K/month example — your number's different, so I set up a page where you can slide your own volume:</p>` +
-        `<p><a href="${napkinLink}" style="display:inline-block;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Slide your own numbers →</a></p>` +
+        `<p><a href="${napkinLink}" style="display:inline-block;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Slide your own numbers &rarr;</a></p>` +
         `<p>— ${esc(rep.first)}</p>` +
         f.html
     );
@@ -232,7 +249,71 @@ export function renderEmail(
     return { subject, html, text };
   }
 
-  // stage 3 — the either-way close
+  if (stage === 3 && cluster === "native") {
+    const subject = lead.owner_first_name
+      ? `Run both rails for a month, ${lead.owner_first_name}?`
+      : `Run both rails for a month`;
+    const visit = pulse(baseUrl, lead.pulse_token, "visit");
+    const html = wrapHtml(
+      `<p>${esc(g)}</p>` +
+        `<p>${esc(`Simplest way to settle it: keep whatever you run today exactly as is, put our terminal beside it for a month, and compare the tape — fees taken, time to money, and how often the staff actually reach for each one.`)}</p>` +
+        `<p>${esc(`Setup is one afternoon. If ours doesn't win on your own numbers, I'll carry it back out myself.`)}</p>` +
+        `<p><a href="${visit}" style="display:inline-block;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Set it up — pick a day &rarr;</a></p>` +
+        `<p>— ${esc(rep.first)}</p>` +
+        f.html
+    );
+    const text = `${g}\n\nSimplest way to settle it: keep whatever you run today exactly as is, put our terminal beside it for a month, and compare the tape — fees taken, time to money, and how often the staff actually reach for each one.\n\nSetup is one afternoon. If ours doesn't win on your own numbers, I'll carry it back out myself.\n\nSet it up — pick a day: ${visit}\n\n— ${rep.first}${f.text}`;
+    return { subject, html, text };
+  }
+
+  if (stage === 3) {
+    const subject = lead.owner_first_name
+      ? `The question every owner asks me, ${lead.owner_first_name}`
+      : `The question every owner asks me`;
+    const html = wrapHtml(
+      `<p>${esc(g)}</p>` +
+        `<p>${esc(`"But my customers pay with cards." Every owner says it — and it's exactly right. That's why nothing about your card setup changes. Same reader, same flow, same everything.`)}</p>` +
+        `<p>${esc(E3_ANGLE[cluster])}</p>` +
+        `<p>${esc(`Worth being ready before the first customer asks. Or the tenth.`)}</p>` +
+        b.html +
+        `<p style="margin-top:14px">— ${esc(rep.first)}</p>` +
+        f.html
+    );
+    const text = `${g}\n\n"But my customers pay with cards." Every owner says it — and it's exactly right. That's why nothing about your card setup changes. Same reader, same flow, same everything.\n\n${E3_ANGLE[cluster]}\n\nWorth being ready before the first customer asks. Or the tenth.\n${b.text}\n\n— ${rep.first}${f.text}`;
+    return { subject, html, text };
+  }
+
+  if (stage === 4 && cluster !== "native") {
+    const subject = `${lead.city} is quietly moving on this`;
+    const curious = pulse(baseUrl, lead.pulse_token, "curious");
+    const html = wrapHtml(
+      `<p>${esc(g)}</p>` +
+        `<p>${esc(`Roughly one in five U.S. small businesses now takes crypto — up from about one in seven a year ago. It stops being a novelty the moment one shop on the block has the sticker and the rest don't.`)}</p>` +
+        `<p>${esc(`We're working ${lead.city} right now, and the map is filling in faster than most owners expect. First shop on a block gets the bragging rights — and the customers who go looking.`)}</p>` +
+        `<p><a href="${curious}" style="display:inline-block;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">See where your block stands &rarr;</a></p>` +
+        `<p>— ${esc(rep.first)}</p>` +
+        f.html
+    );
+    const text = `${g}\n\nRoughly one in five U.S. small businesses now takes crypto — up from about one in seven a year ago. It stops being a novelty the moment one shop on the block has the sticker and the rest don't.\n\nWe're working ${lead.city} right now, and the map is filling in faster than most owners expect. First shop on a block gets the bragging rights — and the customers who go looking.\n\nSee where your block stands: ${curious}\n\n— ${rep.first}${f.text}`;
+    return { subject, html, text };
+  }
+
+  if (stage === 5) {
+    const subject = `The part nobody mentions: new customers`;
+    const curious = pulse(baseUrl, lead.pulse_token, "curious");
+    const html = wrapHtml(
+      `<p>${esc(g)}</p>` +
+        `<p>${esc(`Everything I've sent so far is about keeping money you already earn. Here's the other half: crypto holders actively look for places to spend — and NectarPay is building a merchant directory that points them at the shops that take it.`)}</p>` +
+        `<p>${esc(`The terminal handles the payments today. The listing brings the door swings tomorrow — and early shops anchor their neighborhood on that map.`)}</p>` +
+        `<p><a href="${curious}" style="display:inline-block;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Get on the map early &rarr;</a></p>` +
+        `<p>— ${esc(rep.first)}</p>` +
+        f.html
+    );
+    const text = `${g}\n\nEverything I've sent so far is about keeping money you already earn. Here's the other half: crypto holders actively look for places to spend — and NectarPay is building a merchant directory that points them at the shops that take it.\n\nThe terminal handles the payments today. The listing brings the door swings tomorrow — and early shops anchor their neighborhood on that map.\n\nGet on the map early: ${curious}\n\n— ${rep.first}${f.text}`;
+    return { subject, html, text };
+  }
+
+  // Final stage — the either-way close (stage 6 standard, stage 4 native)
   const subject = `Working ${lead.city} next week either way`;
   const swing = pulse(baseUrl, lead.pulse_token, "visit");
   const close = pulse(baseUrl, lead.pulse_token, "optout");
@@ -243,10 +324,10 @@ export function renderEmail(
       `<a href="${swing}" style="display:inline-block;margin:0 8px 8px 0;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Swing by — pick a day</a>` +
       `<a href="${close}" style="display:inline-block;padding:11px 18px;border:1.5px solid #8a94a3;border-radius:8px;color:#47566B;text-decoration:none">Close my file</a>` +
       `</p>` +
-      `<p>${esc(E3_LINE[CLUSTER_MAP[lead.vertical] ?? "math"])}</p>` +
+      `<p>${esc(E3_LINE[cluster])}</p>` +
       `<p>— ${esc(rep.first)}</p>` +
       f.html
   );
-  const text = `${g}\n\nI'll be working ${lead.city} next week either way — worth ten minutes at your counter to see a live payment settle, or should I close your file?\n\nSwing by — pick a day: ${swing}\nClose my file: ${close}\n\n${E3_LINE[CLUSTER_MAP[lead.vertical] ?? "math"]}\n\n— ${rep.first}${f.text}`;
+  const text = `${g}\n\nI'll be working ${lead.city} next week either way — worth ten minutes at your counter to see a live payment settle, or should I close your file?\n\nSwing by — pick a day: ${swing}\nClose my file: ${close}\n\n${E3_LINE[cluster]}\n\n— ${rep.first}${f.text}`;
   return { subject, html, text };
 }
