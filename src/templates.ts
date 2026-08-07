@@ -18,6 +18,15 @@ export const CLUSTER_MAP: Record<string, Cluster> = {
   "collectibles": "crowd",
   "phone-repair": "simple",
   "gym-supps": "simple",
+  "pawn": "control",
+  "adult-retail": "control",
+  "med-spa": "math",
+  "pool-landscape": "math",
+  "liquor": "math",
+  "bike": "math",
+  "nail-beauty": "crowd",
+  "gaming": "crowd",
+  "thrift-vintage": "crowd",
 };
 
 export type TemplateLead = {
