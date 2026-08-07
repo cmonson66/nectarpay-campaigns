@@ -17,6 +17,8 @@ const argv = process.argv.slice(2);
 const DRY = argv.includes("--dry");
 const testIdx = argv.indexOf("--test");
 const TEST_TO = testIdx >= 0 ? argv[testIdx + 1] : null;
+const onlyIdx = argv.indexOf("--only");
+const ONLY = onlyIdx >= 0 ? argv[onlyIdx + 1] : null; // limit test sends to one vertical
 
 type Config = {
   campaignStart: string;
@@ -80,11 +82,14 @@ async function main() {
     // Email 1 for every vertical (subjects/angle vary), then the full
     // sequence (e2 + e3) once per story cluster.
     const allVerticals = Object.keys(CLUSTER_MAP);
-    const clusterReps = ["smoke-vape", "jewelry-gold", "barber", "phone-repair"];
-    const jobs: { stage: 1 | 2 | 3; vertical: string }[] = [
+    const clusterReps = ["smoke-vape", "jewelry-gold", "barber", "phone-repair", "crypto-native"];
+    let jobs: { stage: 1 | 2 | 3; vertical: string }[] = [
       ...allVerticals.map((v) => ({ stage: 1 as const, vertical: v })),
       ...([2, 3] as const).flatMap((stage) => clusterReps.map((v) => ({ stage, vertical: v }))),
     ];
+    // Native is a two-email sequence — no e3 sample
+    jobs = jobs.filter((j) => !(j.vertical === "crypto-native" && j.stage === 3));
+    if (ONLY) jobs = jobs.filter((j) => j.vertical === ONLY);
     for (const { stage, vertical } of jobs) {
       const r = renderEmail(stage, { ...sample, vertical }, BASE, ADDRESS);
       const { error } = await resend.emails.send({
