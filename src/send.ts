@@ -104,7 +104,8 @@ async function main() {
         text: r.text,
       });
       console.log(`test ${vertical} e${stage}:`, error ? `FAILED ${error.message}` : "sent");
-      await sleep(cfg.sendDelayMs);
+      // Test batches hammer ONE inbox — pace gently so Gmail doesn't defer
+      await sleep(Math.max(cfg.sendDelayMs, 3000));
     }
     console.log(`\n${jobs.length} test emails sent to ${TEST_TO}.`);
     return;
