@@ -105,7 +105,7 @@ const E1: Record<Cluster, (l: TemplateLead) => { subject: string; paras: string[
       : `Card processors keep firing shops like ${l.name}`,
     paras: [
       `You've seen it: a card processor like Square or Stripe decides your industry is "high risk," and a shop down the street is suddenly begging a new one to take their money - at a worse rate.`,
-      `I work with NectarPay here in the Valley. It's a small counter terminal that takes crypto payments with zero processing fee - the money lands in your own wallet the second the customer pays. Not a processor's account. Yours. Nobody can hold it, reverse it, or fire you from it.`,
+      `I work with NectarPay here in the Valley. It's a small terminal by the register that takes crypto payments with zero processing fee - the money lands in your own wallet the second the customer pays. Not a processor's account. Yours. Nobody can hold it, reverse it, or fire you from it.`,
       `Your card reader keeps doing its job. This sits next to it as the no-fee lane.`,
     ],
   }),
@@ -113,14 +113,14 @@ const E1: Record<Cluster, (l: TemplateLead) => { subject: string; paras: string[
     subject: `What did cards cost ${l.name} last month?`,
     paras: [
       `On your ticket sizes, card processing is real money - roughly 3% comes off the top of every sale, and a delivered sale can still get reversed weeks later.`,
-      `I work with NectarPay here in the Valley: a counter terminal that takes crypto payments with zero processing fee, settles to your own wallet in seconds, and can't be charged back. Flat $19/month - never a percentage of your sales.`,
+      `I work with NectarPay here in the Valley: a terminal by the register that takes crypto payments with zero processing fee, settles to your own wallet in seconds, and can't be charged back. Flat $19/month - never a percentage of your sales.`,
       `I put your shop's numbers on a page - slide your monthly volume and watch what stays in the business.`,
     ],
   }),
   crowd: (l) => ({
     subject: `"Do you take crypto?" - ${l.city} edition`,
     paras: [
-      `Somebody's already asked at your counter. Your crowd skews young, and that's exactly who holds crypto and picks the shops that take it.`,
+      `Somebody's already asked at the register. Your crowd skews young, and that's exactly who holds crypto and picks the shops that take it.`,
       `I work with NectarPay here in the Valley - a small terminal that adds crypto as a payment option with zero processing fee. Money hits your own wallet instantly. Cards keep working exactly like today.`,
       `Being the first spot on the block that takes it is worth more than the fees it saves - and it saves those too.`,
     ],
@@ -131,7 +131,7 @@ const E1: Record<Cluster, (l: TemplateLead) => { subject: string; paras: string[
       : `Work done should mean paid - ${l.name}`,
     paras: [
       `You know the worst invoice in this business: the one that comes back. Work's finished, parts are in, service delivered - and weeks later a dispute claws the money back, with a fee stacked on top.`,
-      `I work with NectarPay here in the Valley. It's a counter terminal that takes crypto payments - zero processing fee, and the money settles to your own wallet in seconds. A settled payment is final: no dispute window, no clawbacks, no losing the work and the money.`,
+      `I work with NectarPay here in the Valley. It's a terminal by the register that takes crypto payments - zero processing fee, and the money settles to your own wallet in seconds. A settled payment is final: no dispute window, no clawbacks, no losing the work and the money.`,
       `Setup is an afternoon, and your card reader keeps working exactly like today. This is the final-payment lane beside it.`,
     ],
   }),
@@ -142,7 +142,7 @@ const E1: Record<Cluster, (l: TemplateLead) => { subject: string; paras: string[
     paras: [
       `Most shops in ${l.city} are still deciding whether crypto is real. You already take it - which tells me you did the homework years before your neighbors.`,
       `Here's what I keep seeing at shops that already take it, though: either a BitPay-style processor skimming 1-2% plus a quarter per transaction and settling to the bank in a day or two - card-fee economics on crypto rails - or a bare wallet QR taped by the register that's actually free, but clunky enough that the staff steer people away from it.`,
-      `NectarPay is the third option: a real counter terminal - staff type the amount, customer scans, ten seconds - with zero processing fee and settlement straight to a wallet you control, instantly. Processor-grade checkout, DIY-grade economics. $499 once, $19 a month, flat - never a percentage.`,
+      `NectarPay is the third option: a real terminal - staff type the amount, customer scans, ten seconds - with zero processing fee and settlement straight to a wallet you control, instantly. Processor-grade checkout, DIY-grade economics. $499 once, $19 a month, flat - never a percentage.`,
       `It sits beside whatever you run today - worth ten minutes comparing it against your current rail.`,
     ],
   }),
@@ -152,7 +152,7 @@ const E2_INTRO: Record<Cluster, string> = {
   native: `unused - native e2 renders its own body`,
   control: `Quick follow-up - last time I mentioned nobody can freeze or reverse this lane. Here's the other half: what it saves.`,
   math: `Following up with the napkin math. Here's what $10K/month on cards looks like:`,
-  crowd: `Following up - beyond the young crowd at your counter, here's what the fee side looks like:`,
+  crowd: `Following up - beyond the young crowd at your shop, here's what the fee side looks like:`,
   simple: `Following up with the math, since the setup story is only half of it:`,
 };
 
@@ -168,7 +168,7 @@ const E3_ANGLE: Record<Cluster, string> = {
 // Final-email sign-off line per cluster
 const E3_LINE: Record<Cluster, string> = {
   native: `Either way - you were early, and that's worth something on the map we're building.`,
-  control: `Either way, no hard feelings - but if card processors ever squeeze you again, you'll wish this was already on the counter.`,
+  control: `Either way, no hard feelings - but if card processors ever squeeze you again, you'll wish this was already sitting by the register.`,
   math: `Either way - the fee math doesn't change, so the door's open whenever it makes sense.`,
   crowd: `Either way - first shop on the block still gets the bragging rights, and that window's open now.`,
   simple: `Either way - it's an afternoon to set up whenever you're ready.`,
@@ -319,7 +319,7 @@ export function renderEmail(
   const close = pulse(baseUrl, lead.pulse_token, "optout");
   const html = wrapHtml(
     `<p>${esc(g)}</p>` +
-      `<p>${esc(`I'll be working ${lead.city} next week either way - worth ten minutes at your counter to see a live payment settle, or should I close your file?`)}</p>` +
+      `<p>${esc(`I'll be working ${lead.city} next week either way - worth ten minutes at your shop to see a live payment settle, or should I close your file?`)}</p>` +
       `<p>` +
       `<a href="${swing}" style="display:inline-block;margin:0 8px 8px 0;padding:11px 18px;background:#0C1A2C;color:#F2A71B;border-radius:8px;text-decoration:none;font-weight:700">Swing by - pick a day</a>` +
       `<a href="${close}" style="display:inline-block;padding:11px 18px;border:1.5px solid #8a94a3;border-radius:8px;color:#47566B;text-decoration:none">Close my file</a>` +
@@ -328,6 +328,6 @@ export function renderEmail(
       `<p>- ${esc(rep.first)}</p>` +
       f.html
   );
-  const text = `${g}\n\nI'll be working ${lead.city} next week either way - worth ten minutes at your counter to see a live payment settle, or should I close your file?\n\nSwing by - pick a day: ${swing}\nClose my file: ${close}\n\n${E3_LINE[cluster]}\n\n- ${rep.first}${f.text}`;
+  const text = `${g}\n\nI'll be working ${lead.city} next week either way - worth ten minutes at your shop to see a live payment settle, or should I close your file?\n\nSwing by - pick a day: ${swing}\nClose my file: ${close}\n\n${E3_LINE[cluster]}\n\n- ${rep.first}${f.text}`;
   return { subject, html, text };
 }
